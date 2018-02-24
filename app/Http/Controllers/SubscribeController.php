@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Models\SsGroup;
-use App\Http\Models\SsGroupNode;
-use App\Http\Models\SsNode;
 use App\Http\Models\User;
+use App\Http\Models\UserLabel;
 use App\Http\Models\UserSubscribe;
 use App\Http\Models\UserSubscribeLog;
 use Illuminate\Http\Request;
 use Redirect;
+use DB;
 
 /**
  * 订阅控制器
@@ -33,14 +32,14 @@ class SubscribeController extends Controller
         }
 
         // 校验合法性
-        $subscribe = UserSubscribe::query()->where('code', $code)->where('status', 1)->with('user')->first();
+        $subscribe = UserSubscribe::query()->with('user')->where('code', $code)->where('status', 1)->first();
         if (empty($subscribe)) {
-            exit('非法请求或已被封禁，请联系管理员');
+            exit($this->noneNode());
         }
 
         $user = User::query()->where('id', $subscribe->user_id)->whereIn('status', [0, 1])->where('enable', 1)->first();
         if (empty($user)) {
-            exit('非法请求或已被封禁，请联系管理员');
+            exit($this->noneNode());
         }
 
         // 更新访问次数
@@ -55,15 +54,29 @@ class SubscribeController extends Controller
         $log->save();
 
         // 获取这个账号可用节点
-        $group_ids = SsGroup::query()->where('level', '<=', $user->level)->select(['id'])->get();
-        if (empty($group_ids)) {
-            exit();
+        $userLabelIds = UserLabel::query()->where('user_id', $user->id)->pluck('label_id');
+        if (empty($userLabelIds)) {
+            exit($this->noneNode());
         }
 
-        $node_ids = SsGroupNode::query()->whereIn('group_id', $group_ids)->select(['node_id'])->get();
-        $nodeList = SsNode::query()->where('status', 1)->whereIn('id', $node_ids)->get();
+        $nodeList = DB::table('ss_node')
+            ->leftJoin('ss_node_label', 'ss_node.id', '=', 'ss_node_label.node_id')
+            ->whereIn('ss_node_label.label_id', $userLabelIds)
+            ->where('ss_node.status', 1)
+            ->groupBy('ss_node.id')
+            ->get();
+
+        if ($nodeList->isEmpty()) {
+            exit($this->noneNode());
+        }
+
+        // 控制客户端最多获取节点数
         $scheme = self::$config['subscribe_max'] > 0 ? 'MAX=' . self::$config['subscribe_max'] . "\n" : '';
-        foreach ($nodeList as $node) {
+        foreach ($nodeList as $key => $node) {
+            if (self::$config['subscribe_max'] && $key >= self::$config['subscribe_max']) { // 控制显示的节点数
+                break;
+            }
+
             $obfs_param = $node->single ? '' : $user->obfs_param;
             $protocol_param = $node->single ? $user->port . ':' . $user->passwd : $user->protocol_param;
 
@@ -85,4 +98,9 @@ class SubscribeController extends Controller
         exit($this->base64url_encode($scheme));
     }
 
+    // 抛出无可用的节点信息，用于兼容防止客户端订阅失败
+    private function noneNode()
+    {
+        return $this->base64url_encode('ssr://' . $this->base64url_encode('8.8.8.8:8888:origin:none:plain:' . $this->base64url_encode('0000') . '/?obfsparam=&protoparam=&remarks=' . $this->base64url_encode('无可用节点或账号被封禁') . '&group=' . $this->base64url_encode('VPN') . '&udpport=0&uot=0') . "\n");
+    }
 }

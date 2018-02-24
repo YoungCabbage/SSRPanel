@@ -15,11 +15,11 @@
                 <div class="portlet light bordered">
                     <div class="portlet-title">
                         <div class="caption font-dark">
-                            <span class="caption-subject bold uppercase"> 文章访问日志 </span>
+                            <span class="caption-subject bold uppercase"> 标签列表 </span>
                         </div>
                         <div class="actions">
                             <div class="btn-group">
-
+                                <button class="btn sbold blue" onclick="addLabel()"> 添加标签 </button>
                             </div>
                         </div>
                     </div>
@@ -29,35 +29,34 @@
                                 <thead>
                                 <tr>
                                     <th> # </th>
-                                    <th> 文章ID </th>
-                                    <th> 坐标 </th>
-                                    <th> IP </th>
-                                    <th> 头部信息 </th>
-                                    <th> 状态 </th>
-                                    <th> 访问时间 </th>
+                                    <th> 名称 </th>
+                                    <th> 关联用户数 </th>
+                                    <th> 关联节点数 </th>
+                                    <th> 排序 </th>
+                                    <th> 操作 </th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                @if($articleLogList->isEmpty())
+                                @if($labelList->isEmpty())
                                     <tr>
-                                        <td colspan="7">暂无数据</td>
+                                        <td colspan="6">暂无数据</td>
                                     </tr>
                                 @else
-                                    @foreach($articleLogList as $articleLog)
+                                    @foreach($labelList as $label)
                                         <tr class="odd gradeX">
-                                            <td> {{$articleLog->id}} </td>
-                                            <td> <a href="{{url('article?id=' . $articleLog->aid)}}" target="_blank"> {{$articleLog->aid}} </a> </td>
-                                            <td> {{$articleLog->lat}},{{$articleLog->lng}} </td>
-                                            <td> {{$articleLog->ip}} </td>
-                                            <td> {{$articleLog->headers}} </td>
+                                            <td> {{$label->id}} </td>
+                                            <td> {{$label->name}} </td>
+                                            <td> {{$label->userCount}} </td>
+                                            <td> {{$label->nodeCount}} </td>
+                                            <td> {{$label->sort}} </td>
                                             <td>
-                                                @if ($articleLog->status)
-                                                    <span class="label label-default">已查看</span>
-                                                @else
-                                                    <span class="label label-info">未查看</span>
-                                                @endif
+                                                <button type="button" class="btn btn-sm blue btn-outline" onclick="editLabel('{{$label->id}}')">
+                                                    <i class="fa fa-pencil"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm red btn-outline" onclick="delLabel('{{$label->id}}')">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
                                             </td>
-                                            <td> {{$articleLog->created_at}} </td>
                                         </tr>
                                     @endforeach
                                 @endif
@@ -66,11 +65,11 @@
                         </div>
                         <div class="row">
                             <div class="col-md-4 col-sm-4">
-                                <div class="dataTables_info" role="status" aria-live="polite">共 {{$articleLogList->total()}} 条日志</div>
+                                <div class="dataTables_info" role="status" aria-live="polite">共 {{$labelList->total()}} 个标签</div>
                             </div>
                             <div class="col-md-8 col-sm-8">
                                 <div class="dataTables_paginate paging_bootstrap_full_number pull-right">
-                                    {{ $articleLogList->links() }}
+                                    {{ $labelList->links() }}
                                 </div>
                             </div>
                         </div>
@@ -87,6 +86,29 @@
     <script src="/js/layer/layer.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        //
+        // 添加标签
+        function addLabel() {
+            window.location.href = '{{url('admin/addLabel')}}';
+        }
+
+        // 编辑标签
+        function editLabel(id) {
+            window.location.href = '{{url('admin/editLabel?id=')}}' + id + '&page=' + '{{Request::get('page', 1)}}';
+        }
+
+        // 删除标签
+        function delLabel(id) {
+            layer.confirm('确定删除标签？', {icon: 2, title:'警告'}, function(index) {
+                $.post("{{url('admin/delLabel')}}", {id:id, _token:'{{csrf_token()}}'}, function(ret) {
+                    layer.msg(ret.message, {time:1000}, function() {
+                        if (ret.status == 'success') {
+                            window.location.reload();
+                        }
+                    });
+                });
+
+                layer.close(index);
+            });
+        }
     </script>
 @endsection

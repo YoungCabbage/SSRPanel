@@ -16,6 +16,7 @@ use App\Http\Models\Ticket;
 use App\Http\Models\TicketReply;
 use App\Http\Models\User;
 use App\Http\Models\UserBalanceLog;
+use App\Http\Models\UserLabel;
 use App\Http\Models\UserScoreLog;
 use App\Http\Models\UserSubscribe;
 use App\Http\Models\UserTrafficDaily;
@@ -63,12 +64,18 @@ class UserController extends Controller
         }
 
         // 节点列表
-        $nodeList = DB::table('ss_group_node')
-            ->leftJoin('ss_group', 'ss_group.id', '=', 'ss_group_node.group_id')
-            ->leftJoin('ss_node', 'ss_node.id', '=', 'ss_group_node.node_id')
-            ->where('ss_group.level', '<=', $user->level)
+        $userLabelIds = UserLabel::query()->where('user_id', $user['id'])->pluck('label_id');
+        if (empty($userLabelIds)) {
+            $view['nodeList'] = [];
+
+            return Response::view('user/index', $view);
+        }
+
+        $nodeList = DB::table('ss_node')
+            ->leftJoin('ss_node_label', 'ss_node.id', '=', 'ss_node_label.node_id')
+            ->whereIn('ss_node_label.label_id', $userLabelIds)
             ->where('ss_node.status', 1)
-            ->orderBy('ss_node.sort', 'desc')
+            ->groupBy('ss_node.id')
             ->get();
 
         foreach ($nodeList as &$node) {
@@ -298,7 +305,7 @@ class UserController extends Controller
     public function addTicket(Request $request)
     {
         $title = $request->get('title');
-        $content = $request->get('content');
+        $content = clean($request->get('content'));
 
         $user = $request->session()->get('user');
 
@@ -325,7 +332,7 @@ class UserController extends Controller
         $user = $request->session()->get('user');
 
         if ($request->method() == 'POST') {
-            $content = $request->get('content');
+            $content = clean($request->get('content'));
 
             $obj = new TicketReply();
             $obj->ticket_id = $id;
@@ -961,8 +968,8 @@ class UserController extends Controller
 
         // 如果没有唯一码则生成一个
         $subscribe = UserSubscribe::query()->where('user_id', $user['id'])->first();
-        if (empty($subscribe)) {
-            $code = mb_substr(md5($user['id'] . '-' . $user['username']), 8, 12);
+        if (!$subscribe) {
+            $code = $this->makeSubscribeCode();
 
             $obj = new UserSubscribe();
             $obj->user_id = $user['id'];
@@ -973,9 +980,21 @@ class UserController extends Controller
             $code = $subscribe->code;
         }
 
-        $view['link'] = self::$config['website_url'] . '/subscribe/' . $code;
+        $view['link'] = self::$config['subscribe_domain'] ? self::$config['subscribe_domain'] . '/s/' . $code : self::$config['website_url'] . '/s/' . $code;
 
         return Response::view('/user/subscribe', $view);
+    }
+
+    // 更换订阅地址
+    public function exchangeSubscribe(Request $request)
+    {
+        $user = $request->session()->get('user');
+
+        $code = $this->makeSubscribeCode();
+
+        UserSubscribe::query()->where('user_id', $user['id'])->update(['code' => $code]);
+
+        return Response::json(['status' => 'success', 'data' => '', 'message' => '更换成功']);
     }
 
     // 转换成管理员的身份
@@ -1045,7 +1064,7 @@ class UserController extends Controller
             DB::commit();
 
             return Response::json(['status' => 'success', 'data' => '', 'message' => '充值成功']);
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
             Log::error($e->getMessage());
             DB::rollBack();
 

@@ -141,6 +141,12 @@
                         <span class="title">工单管理</span>
                     </a>
                 </li>
+                <li class="nav-item {{in_array(Request::path(), ['admin/labelList', 'admin/addLabel', 'admin/editLabel']) ? 'active open' : ''}}">
+                    <a href="{{url('admin/labelList')}}" class="nav-link nav-toggle">
+                        <i class="fa fa-sticky-note-o"></i>
+                        <span class="title">标签管理</span>
+                    </a>
+                </li>
                 <li class="nav-item {{in_array(Request::path(), ['admin/articleList', 'admin/addArticle', 'admin/editArticle', 'admin/articleLogList']) ? 'active open' : ''}}">
                     <a href="javascript:;" class="nav-link nav-toggle">
                         <i class="icon-docs"></i>
@@ -152,12 +158,6 @@
                             <a href="{{url('admin/articleList')}}" class="nav-link ">
                                 <i class="fa fa-file-archive-o"></i>
                                 <span class="title">文章列表</span>
-                            </a>
-                        </li>
-                        <li class="nav-item {{in_array(Request::path(), ['admin/articleLogList']) ? 'active open' : ''}}">
-                            <a href="{{url('admin/articleLogList')}}" class="nav-link ">
-                                <i class="icon-list"></i>
-                                <span class="title">文章访问日志</span>
                             </a>
                         </li>
                     </ul>

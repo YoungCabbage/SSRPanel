@@ -217,6 +217,13 @@
                                                     </div>
                                                     <div class="form-group">
                                                         <div class="col-md-6">
+                                                            <label for="is_forbid_robot" class="col-md-3 control-label">阻止机器人访问</label>
+                                                            <div class="col-md-9">
+                                                                <input type="checkbox" class="make-switch" @if($is_forbid_robot) checked @endif id="is_forbid_robot" data-on-color="success" data-off-color="danger" data-on-text="启用" data-off-text="关闭">
+                                                                <span class="help-block"> 如果是机器人、爬虫、代理访问网站则会抛出403错误 </span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
                                                             <label for="active_times" class="col-md-3 control-label">激活账号次数</label>
                                                             <div class="col-md-9">
                                                                 <div class="input-group">
@@ -228,28 +235,32 @@
                                                                 <span class="help-block"> 24小时内可以通过邮件激活账号次数 </span>
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <div class="col-md-6">
+                                                            <label for="subscribe_domain" class="col-md-3 control-label">节点订阅地址</label>
+                                                            <div class="col-md-9">
+                                                                <div class="input-group">
+                                                                    <input class="form-control" type="text" name="subscribe_domain" value="{{$subscribe_domain}}" id="subscribe_domain" />
+                                                                    <span class="input-group-btn">
+                                                                        <button class="btn btn-success" type="button" onclick="setSubscribeDomain()">修改</button>
+                                                                    </span>
+                                                                </div>
+                                                                <span class="help-block"> （推荐）防止网站域名被投毒后用户无法正常订阅，需带http://或https:// </span>
+                                                            </div>
+                                                        </div>
                                                         <div class="col-md-6">
                                                             <label for="subscribe_max" class="col-md-3 control-label">订阅节点数</label>
                                                             <div class="col-md-9">
                                                                 <div class="input-group">
                                                                     <input class="form-control" type="text" name="subscribe_max" value="{{$subscribe_max}}" id="subscribe_max" />
                                                                     <span class="input-group-btn">
-                                                                    <button class="btn btn-success" type="button" onclick="setSubscribeMax()">修改</button>
-                                                                </span>
+                                                                        <button class="btn btn-success" type="button" onclick="setSubscribeMax()">修改</button>
+                                                                    </span>
                                                                 </div>
                                                                 <span class="help-block"> 客户端订阅时随机取得几个节点 </span>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <div class="col-md-6">
-                                                            <label for="is_forbid_robot" class="col-md-3 control-label">阻止机器人访问</label>
-                                                            <div class="col-md-9">
-                                                                <input type="checkbox" class="make-switch" @if($is_forbid_robot) checked @endif id="is_forbid_robot" data-on-color="success" data-off-color="danger" data-on-text="启用" data-off-text="关闭">
-                                                                <span class="help-block"> 如果是机器人、爬虫、代理访问网站则会抛出403错误 </span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6"></div>
                                                     </div>
                                                 </div>
                                             </form>
@@ -400,7 +411,7 @@
                                                     </div>
                                                     <div class="form-group">
                                                         <div class="col-md-6">
-                                                            <label for="is_node_crash_warning" class="col-md-3 control-label">节点宕机警告</label>
+                                                            <label for="is_node_crash_warning" class="col-md-3 control-label">节点宕机提醒</label>
                                                             <div class="col-md-9">
                                                                 <input type="checkbox" class="make-switch" @if($is_node_crash_warning) checked @endif id="is_node_crash_warning" data-on-color="success" data-off-color="danger" data-on-text="启用" data-off-text="关闭">
                                                                 <span class="help-block"> 启用后如果节点宕机则发出提醒邮件 </span>
@@ -415,7 +426,7 @@
                                                                         <button class="btn btn-success" type="button" onclick="setCrashWarningEmail()">修改</button>
                                                                     </span>
                                                                 </div>
-                                                                <span class="help-block"> 启用节点宕机提醒时请务必配置本值 </span>
+                                                                <span class="help-block"> 启用节点宕机提醒后如果不填写此值，则不发信 </span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -424,7 +435,7 @@
                                                             <label for="is_server_chan" class="col-md-3 control-label">ServerChan</label>
                                                             <div class="col-md-9">
                                                                 <input type="checkbox" class="make-switch" @if($is_server_chan) checked @endif id="is_server_chan" data-on-color="success" data-off-color="danger" data-on-text="启用" data-off-text="关闭">
-                                                                <span class="help-block"> 启用后将使用ServerChan推送节点宕机提醒（<a href="http://sc.ftqq.com" target="_blank">绑定微信</a>） </span>
+                                                                <span class="help-block"> 使用ServerChan推送节点宕机提醒（<a href="http://sc.ftqq.com" target="_blank">绑定微信</a>），须先启用节点宕机警告 </span>
                                                             </div>
                                                         </div>
                                                         <div class="col-md-6">
@@ -451,7 +462,7 @@
                                                             <label for="is_clear_log" class="col-md-3 control-label">自动清除日志</label>
                                                             <div class="col-md-9">
                                                                 <input type="checkbox" class="make-switch" @if($is_clear_log) checked @endif id="is_clear_log" data-on-color="success" data-off-color="danger" data-on-text="启用" data-off-text="关闭">
-                                                                <span class="help-block"> 启用后自动清除无用日志（推荐） </span>
+                                                                <span class="help-block"> （推荐）启用后自动清除无用日志 </span>
                                                             </div>
                                                         </div>
                                                         <div class="col-md-6">
@@ -1189,6 +1200,19 @@
             var active_times = $("#active_times").val();
 
             $.post("{{url('admin/setConfig')}}", {_token:'{{csrf_token()}}', name:'active_times', value:active_times}, function (ret) {
+                layer.msg(ret.message, {time:1000}, function() {
+                    if (ret.status == 'fail') {
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+
+        // 设置激活用户次数
+        function setSubscribeDomain() {
+            var subscribe_domain = $("#subscribe_domain").val();
+
+            $.post("{{url('admin/setConfig')}}", {_token:'{{csrf_token()}}', name:'subscribe_domain', value:subscribe_domain}, function (ret) {
                 layer.msg(ret.message, {time:1000}, function() {
                     if (ret.status == 'fail') {
                         window.location.reload();

@@ -28,10 +28,10 @@ CREATE TABLE `ss_node` (
   `name` varchar(128) NOT NULL DEFAULT '' COMMENT '名称',
   `group_id` int(11) NOT NULL DEFAULT '0' COMMENT '所属分组',
   `country_code` char(5) DEFAULT '' COMMENT '国家代码',
-  `server` varchar(128) NOT NULL DEFAULT '' COMMENT '服务器地址',
+  `server` varchar(128) DEFAULT '' COMMENT '服务器域名地址',
+  `ip` varchar(30) DEFAULT NULL COMMENT '服务器IP地址',
   `desc` varchar(255) DEFAULT '' COMMENT '节点简单描述',
   `method` varchar(32) NOT NULL DEFAULT 'aes-192-ctr' COMMENT '加密方式',
-  `custom_method` varchar(30) NOT NULL DEFAULT 'aes-192-ctr' COMMENT '自定义加密方式',
   `protocol` varchar(128) NOT NULL DEFAULT 'auth_chain_a' COMMENT '协议',
   `protocol_param` varchar(128) DEFAULT '' COMMENT '协议参数',
   `obfs` varchar(128) NOT NULL DEFAULT 'tls1.2_ticket_auth' COMMENT '混淆',
@@ -48,7 +48,7 @@ CREATE TABLE `ss_node` (
   `single_method` varchar(50) DEFAULT '' COMMENT '加密方式',
   `single_protocol` varchar(50) NOT NULL DEFAULT '' COMMENT '协议',
   `single_obfs` varchar(50) NOT NULL DEFAULT '' COMMENT '混淆',
-  `sort` int(3) NOT NULL DEFAULT '0' COMMENT '排序值，值越大越靠前显示',
+  `sort` int(11) NOT NULL DEFAULT '0' COMMENT '排序值，值越大越靠前显示',
   `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '状态：0-维护、1-正常',
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
@@ -81,6 +81,20 @@ CREATE TABLE `ss_node_online_log` (
   PRIMARY KEY (`id`),
   KEY `idx_node_id` (`node_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='节点在线信息';
+
+
+-- ----------------------------
+-- Table structure for `ss_node_label`
+-- ----------------------------
+CREATE TABLE `ss_node_label` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `node_id` int(11) NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `label_id` int(11) NOT NULL DEFAULT '0' COMMENT '标签ID',
+  PRIMARY KEY (`id`),
+  KEY `idx` (`node_id`,`label_id`),
+  KEY `idx_node_id` (`node_id`),
+  KEY `idx_label_id` (`label_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='节点标签';
 
 
 -- ----------------------------
@@ -134,8 +148,8 @@ CREATE TABLE `user` (
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
 
-INSERT INTO `user` (`id`, `username`, `password`, `port`, `passwd`, `transfer_enable`, `u`, `d`, `t`, `enable`, `method`, `custom_method`, `protocol`, `protocol_param`, `obfs`, `obfs_param`, `speed_limit_per_con`, `speed_limit_per_user`, `wechat`, `qq`, `usage`, `pay_way`, `balance`, `enable_time`, `expire_time`, `remark`, `is_admin`, `reg_ip`, `created_at`, `updated_at`)
-VALUES (1,'admin','e10adc3949ba59abbe56e057f20f883e',10000,'@123',1073741824000,0,0,0,1,'aes-192-ctr','aes-192-ctr','auth_chain_a','','tls1.2_ticket_auth','',204800,204800,'','',1,3,0.00,NULL,'2099-01-01',NULL,1,'127.0.0.1',NULL,NULL);
+INSERT INTO `user` (`id`, `username`, `password`, `port`, `passwd`, `transfer_enable`, `u`, `d`, `t`, `enable`, `method`, `protocol`, `protocol_param`, `obfs`, `obfs_param`, `speed_limit_per_con`, `speed_limit_per_user`, `wechat`, `qq`, `usage`, `pay_way`, `balance`, `enable_time`, `expire_time`, `remark`, `is_admin`, `reg_ip`, `created_at`, `updated_at`)
+VALUES (1,'admin','e10adc3949ba59abbe56e057f20f883e',10000,'@123',1073741824000,0,0,0,1,'aes-192-ctr','auth_chain_a','','tls1.2_ticket_auth','',204800,204800,'','',1,3,0.00,NULL,'2099-01-01',NULL,1,'127.0.0.1',NULL,NULL);
 
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -301,6 +315,8 @@ INSERT INTO `config` VALUES ('43', 'paypal_status', 0);
 INSERT INTO `config` VALUES ('44', 'paypal_client_id', '');
 INSERT INTO `config` VALUES ('45', 'paypal_client_secret', '');
 INSERT INTO `config` VALUES ('46', 'is_free_code', 0);
+INSERT INTO `config` VALUES ('47', 'is_forbid_robot', 0);
+INSERT INTO `config` VALUES ('48', 'subscribe_domain', '');
 
 
 -- ----------------------------
@@ -321,32 +337,6 @@ CREATE TABLE `article` (
 
 
 -- ----------------------------
--- Table structure for `article_log`
--- ----------------------------
-CREATE TABLE `article_log` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `aid` int(11) NOT NULL DEFAULT '0' COMMENT '文章ID',
-  `lat` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '纬度',
-  `lng` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '经度',
-  `ip` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'IP地址',
-  `headers` text COLLATE utf8mb4_unicode_ci COMMENT '浏览器头部信息',
-  `nation` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '国家',
-  `province` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '省',
-  `city` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '市',
-  `district` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '区',
-  `street` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '街道',
-  `street_number` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '门牌',
-  `address` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '地址',
-  `full` text COLLATE utf8mb4_unicode_ci COMMENT '地图完整请求数据',
-  `is_pull` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否获取拉取地址信息',
-  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '状态：0-未查看、1-已查看',
-  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
-  `updated_at` datetime DEFAULT NULL COMMENT '最后更新时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- ----------------------------
 -- Table structure for `invite`
 -- ----------------------------
 CREATE TABLE `invite` (
@@ -360,6 +350,28 @@ CREATE TABLE `invite` (
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='邀请码表';
+
+
+-- ----------------------------
+-- Table structure for `label`
+-- ----------------------------
+CREATE TABLE `label` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名称',
+  `sort` int(11) NOT NULL DEFAULT '0' COMMENT '排序值',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='标签';
+
+
+-- ----------------------------
+-- Records of label
+-- ----------------------------
+INSERT INTO `label` VALUES ('1', '电信', '0');
+INSERT INTO `label` VALUES ('2', '联通', '0');
+INSERT INTO `label` VALUES ('3', '移动', '0');
+INSERT INTO `label` VALUES ('4', '教育网', '0');
+INSERT INTO `label` VALUES ('5', '其他网络', '0');
+INSERT INTO `label` VALUES ('6', '免费体验', '0');
 
 
 -- ----------------------------
@@ -613,7 +625,7 @@ CREATE TABLE `email_log` (
 CREATE TABLE `user_subscribe` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL DEFAULT '0' COMMENT '用户ID',
-  `code` varchar(255) DEFAULT '' COMMENT '订阅地址唯一识别码',
+  `code` char(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '' COMMENT '订阅地址唯一识别码',
   `times` int(11) NOT NULL DEFAULT '0' COMMENT '地址请求次数',
   `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '状态：0-禁用、1-启用',
   `ban_time` int(11) NOT NULL DEFAULT '0' COMMENT '封禁时间',
@@ -722,6 +734,20 @@ CREATE TABLE `user_ban_log` (
   `updated_at` datetime DEFAULT NULL COMMENT '最后更新时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户封禁日志';
+
+
+-- ----------------------------
+-- Table structure for `user_label`
+-- ----------------------------
+CREATE TABLE `user_label` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `label_id` int(11) NOT NULL DEFAULT '0' COMMENT '标签ID',
+  PRIMARY KEY (`id`),
+  KEY `idx` (`user_id`,`label_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_label_id` (`label_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户标签';
 
 
 -- ----------------------------
