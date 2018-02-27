@@ -172,7 +172,16 @@
                                             <div class="form-group">
                                                 <label for="port" class="col-md-3 control-label">端口</label>
                                                 <div class="col-md-8">
-                                                    <input type="text" class="form-control" name="port" value="{{$last_port}}" id="port" placeholder="" aria-required="true" aria-invalid="true" aria-describedby="number-error" required>
+                                                    @if($is_rand_port)
+                                                        <div class="input-group">
+                                                            <input class="form-control" type="text" name="port" value="{{$last_port}}" id="port" />
+                                                            <span class="input-group-btn">
+                                                                <button class="btn btn-success" type="button" onclick="makePort()"> 生成 </button>
+                                                            </span>
+                                                        </div>
+                                                    @else
+                                                        <input type="text" class="form-control" name="port" value="{{$last_port}}" id="port" placeholder="" aria-required="true" aria-invalid="true" aria-describedby="number-error" required>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <div class="form-group">
@@ -181,8 +190,7 @@
                                                     <div class="input-group">
                                                         <input class="form-control" type="text" name="passwd" id="passwd" placeholder="留空则自动生成随机密码" />
                                                         <span class="input-group-btn">
-                                                            <button class="btn btn-success" type="button" onclick="makePasswd()">
-                                                                <i class="fa fa-arrow-left fa-fw" /></i> 生成 </button>
+                                                            <button class="btn btn-success" type="button" onclick="makePasswd()"> 生成 </button>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -356,6 +364,13 @@
             });
 
             return false;
+        }
+
+        // 生成随机端口
+        function makePort() {
+            $.get("{{url('admin/makePort')}}",  function(ret) {
+                $("#port").val(ret);
+            });
         }
 
         // 生成随机密码

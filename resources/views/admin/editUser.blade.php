@@ -212,7 +212,12 @@
                                             <div class="form-group">
                                                 <label for="port" class="col-md-3 control-label">端口</label>
                                                 <div class="col-md-8">
-                                                    <input type="text" class="form-control" name="port" value="{{$user->port}}" id="port" placeholder="" aria-required="true" aria-invalid="true" aria-describedby="number-error" required>
+                                                    <div class="input-group">
+                                                        <input class="form-control" type="text" name="port" value="{{$user->port}}" id="port" />
+                                                        <span class="input-group-btn">
+                                                            <button class="btn btn-success" type="button" onclick="makePort()"> {{$user->port ? '更换' : '生成'}} </button>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="form-group">
@@ -221,8 +226,7 @@
                                                     <div class="input-group">
                                                         <input class="form-control" type="text" name="passwd" value="{{$user->passwd}}" id="passwd" />
                                                         <span class="input-group-btn">
-                                                            <button class="btn btn-success" type="button" onclick="makePasswd()">
-                                                                <i class="fa fa-arrow-left fa-fw" /></i> 生成 </button>
+                                                            <button class="btn btn-success" type="button" onclick="makePasswd()"> 生成 </button>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -451,6 +455,13 @@
             });
 
             return false;
+        }
+
+        // 生成随机端口
+        function makePort() {
+            $.get("{{url('admin/makePort')}}",  function(ret) {
+                $("#port").val(ret);
+            });
         }
 
         // 生成随机密码
