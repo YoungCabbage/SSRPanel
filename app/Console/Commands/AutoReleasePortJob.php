@@ -2,14 +2,14 @@
 
 namespace App\Console\Commands;
 
-use App\Http\Models\User;
 use Illuminate\Console\Command;
+use App\Http\Models\User;
 use App\Http\Models\Config;
 use Log;
 
 class AutoReleasePortJob extends Command
 {
-    protected $signature = 'command:autoReleasePortJob';
+    protected $signature = 'autoReleasePortJob';
     protected $description = '自动释放端口';
 
     public function __construct()
@@ -25,7 +25,9 @@ class AutoReleasePortJob extends Command
             $userList = User::query()->where('status', '<', 0)->get();
             if (!$userList->isEmpty()) {
                 foreach ($userList as $user) {
-                    User::query()->where('id', $user->id)->update(['port' => 0]);
+                    if ($user->port) {
+                        User::query()->where('id', $user->id)->update(['port' => 0]);
+                    }
                 }
             }
         }

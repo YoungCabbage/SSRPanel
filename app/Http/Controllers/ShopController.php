@@ -14,20 +14,13 @@ use Redirect;
  */
 class ShopController extends Controller
 {
-    protected static $config;
-
-    function __construct()
-    {
-        self::$config = $this->systemConfig();
-    }
-
     // 商品列表
     public function goodsList(Request $request)
     {
         $goodsList = Goods::query()->where('is_del', 0)->orderBy('id', 'desc')->paginate(10);
         foreach ($goodsList as $goods) {
             $goods->price = $goods->price / 100;
-            $goods->traffic = $this->flowAutoShow($goods->traffic * 1048576);
+            $goods->traffic = flowAutoShow($goods->traffic * 1048576);
         }
 
         $view['goodsList'] = $goodsList;
