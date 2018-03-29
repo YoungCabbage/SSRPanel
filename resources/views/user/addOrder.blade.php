@@ -84,13 +84,12 @@
                 data: {_token:'{{csrf_token()}}', coupon_sn:coupon_sn},
                 dataType: 'json',
                 beforeSend: function () {
-                    index = layer.load(1, {
+                    layerIndex = layer.load(1, {
                         shade: [0.7,'#CCC']
                     });
                 },
                 success: function (ret) {
                     console.log(ret);
-                    layer.close(index);
                     $("#coupon_sn").parent().removeClass("has-error");
                     $("#coupon_sn").parent().removeClass("has-success");
                     $(".input-group-addon").remove();
@@ -113,6 +112,9 @@
                         $("#coupon_sn").parent().remove('.input-group-addon');
                         $("#coupon_sn").parent().prepend('<span class="input-group-addon"><i class="fa fa-remove fa-fw"></i></span>');
                     }
+                },
+                complete: function () {
+                    layer.close(layerIndex);
                 }
             });
         }
@@ -129,7 +131,7 @@
                 data: {_token:'{{csrf_token()}}', goods_id:goods_id, coupon_sn:coupon_sn},
                 dataType: 'json',
                 beforeSend: function () {
-                    index = layer.load(1, {
+                    layerIndex = layer.load(1, {
                         shade: [0.7,'#CCC']
                     });
                 },
@@ -137,14 +139,12 @@
                     layer.msg(ret.message, {time:1300}, function() {
                         if (ret.status == 'success') {
                             window.location.href = '{{url('payment')}}' + "/" + ret.data;
-                        } else {
-                            layer.close(index);
                         }
                     });
+                },
+                complete: function () {
+                    layer.close(layerIndex);
                 }
-                //complete: function () {
-                    //
-                //}
             });
         }
 
@@ -160,7 +160,7 @@
                 data: {_token:'{{csrf_token()}}', goods_id:goods_id, coupon_sn:coupon_sn},
                 dataType: 'json',
                 beforeSend: function () {
-                    index = layer.load(1, {
+                    layerIndex = layer.load(1, {
                         shade: [0.7,'#CCC']
                     });
                 },
@@ -168,10 +168,11 @@
                     layer.msg(ret.message, {time:1300}, function() {
                         if (ret.status == 'success') {
                             window.location.href = '{{url('user/orderList')}}';
-                        } else {
-                            layer.close(index);
                         }
                     });
+                },
+                complete: function () {
+                    layer.close(layerIndex);
                 }
             });
         }
