@@ -56,7 +56,7 @@ class UserController extends Controller
         $user->usedTransfer = flowAutoShow($user->u + $user->d);
         $user->usedPercent = $user->transfer_enable > 0 ? round(($user->u + $user->d) / $user->transfer_enable, 2) : 1;
         $user->levelName = Level::query()->where('level', $user['level'])->first()['level_name'];
-        $user->balance = $user->balance / 100;
+
         $view['info'] = $user->toArray();
         $view['notice'] = Article::query()->where('type', 2)->where('is_del', 0)->orderBy('id', 'desc')->first();
         $view['articleList'] = Article::query()->where('type', 1)->where('is_del', 0)->orderBy('sort', 'desc')->orderBy('id', 'desc')->paginate(5);
@@ -240,10 +240,10 @@ class UserController extends Controller
                 }
 
                 $data = [
-                    'passwd' => $passwd,
-                    'method' => $method,
+                    'passwd'   => $passwd,
+                    'method'   => $method,
                     'protocol' => $protocol,
-                    'obfs' => $obfs
+                    'obfs'     => $obfs
                 ];
 
                 $ret = User::query()->where('id', $user['id'])->update($data);
@@ -309,7 +309,6 @@ class UserController extends Controller
     {
         $goodsList = Goods::query()->where('status', 1)->where('is_del', 0)->orderBy('type', 'desc')->paginate(10)->appends($request->except('page'));
         foreach ($goodsList as $goods) {
-            $goods->price = $goods->price / 100;
             $goods->traffic = flowAutoShow($goods->traffic * 1048576);
         }
 
@@ -337,15 +336,7 @@ class UserController extends Controller
     {
         $user = $request->session()->get('user');
 
-        $orderList = Order::query()->with(['user', 'goods', 'coupon', 'payment'])->where('user_id', $user['id'])->orderBy('oid', 'desc')->paginate(10)->appends($request->except('page'));
-        if (!$orderList->isEmpty()) {
-            foreach ($orderList as &$order) {
-                $order->totalOriginalPrice = $order->totalOriginalPrice / 100;
-                $order->totalPrice = $order->totalPrice / 100;
-            }
-        }
-
-        $view['orderList'] = $orderList;
+        $view['orderList'] = Order::query()->with(['user', 'goods', 'coupon', 'payment'])->where('user_id', $user['id'])->orderBy('oid', 'desc')->paginate(10)->appends($request->except('page'));
         $view['website_analytics'] = self::$config['website_analytics'];
         $view['website_customer_service'] = self::$config['website_customer_service'];
 
@@ -806,7 +797,7 @@ class UserController extends Controller
             return Response::json(['status' => 'fail', 'data' => '', 'message' => '优惠券不能为空']);
         }
 
-        $coupon = Coupon::query()->where('sn', $coupon_sn)->where('is_del', 0)->first();
+        $coupon = Coupon::query()->where('sn', $coupon_sn)->whereIn('type', [1, 2])->where('is_del', 0)->first();
         if (empty($coupon)) {
             return Response::json(['status' => 'fail', 'data' => '', 'message' => '该优惠券不存在']);
         } else if ($coupon->status == 1) {
@@ -821,8 +812,8 @@ class UserController extends Controller
         }
 
         $data = [
-            'type' => $coupon->type,
-            'amount' => $coupon->amount / 100,
+            'type'     => $coupon->type,
+            'amount'   => $coupon->amount,
             'discount' => $coupon->discount
         ];
 
@@ -845,21 +836,21 @@ class UserController extends Controller
 
             // 使用优惠券
             if (!empty($coupon_sn)) {
-                $coupon = Coupon::query()->where('sn', $coupon_sn)->where('is_del', 0)->where('status', 0)->first();
+                $coupon = Coupon::query()->where('sn', $coupon_sn)->whereIn('type', [1, 2])->where('is_del', 0)->where('status', 0)->first();
                 if (empty($coupon)) {
                     return Response::json(['status' => 'fail', 'data' => '', 'message' => '支付失败：优惠券不存在']);
                 }
 
                 // 计算实际应支付总价
-                $totalPrice = $coupon->type == 2 ? $goods->price * $coupon->discount : $goods->price - $coupon->amount;
-                $totalPrice = $totalPrice > 0 ? $totalPrice : 0;
+                $amount = $coupon->type == 2 ? $goods->price * $coupon->discount : $goods->price - $coupon->amount;
+                $amount = $amount > 0 ? $amount : 0;
             } else {
-                $totalPrice = $goods->price;
+                $amount = $goods->price;
             }
 
             // 验证账号余额是否充足
             $user = User::query()->where('id', $user['id'])->first();
-            if ($user->balance < $totalPrice) {
+            if ($user->balance < $amount) {
                 return Response::json(['status' => 'fail', 'data' => '', 'message' => '支付失败：您的余额不足，请先充值']);
             }
 
@@ -867,28 +858,28 @@ class UserController extends Controller
             try {
                 // 生成订单
                 $order = new Order();
-                $order->orderId = date('ymdHis') . mt_rand(100000, 999999);
+                $order->order_sn = date('ymdHis') . mt_rand(100000, 999999);
                 $order->user_id = $user->id;
                 $order->goods_id = $goods_id;
                 $order->coupon_id = !empty($coupon) ? $coupon->id : 0;
-                $order->totalOriginalPrice = $goods->price;
-                $order->totalPrice = $totalPrice;
+                $order->origin_amount = $goods->price;
+                $order->amount = $amount;
                 $order->expire_at = date("Y-m-d H:i:s", strtotime("+" . $goods->days . " days"));
                 $order->is_expire = 0;
-                $order->pay_way = 1; // 支付方式
+                $order->pay_way = 1;
                 $order->status = 2;
                 $order->save();
 
                 // 扣余额
-                User::query()->where('id', $user->id)->decrement('balance', $totalPrice);
+                User::query()->where('id', $user->id)->decrement('balance', $amount);
 
                 // 记录余额操作日志
                 $userBalanceLog = new UserBalanceLog();
                 $userBalanceLog->user_id = $user->id;
                 $userBalanceLog->order_id = $order->oid;
                 $userBalanceLog->before = $user->balance;
-                $userBalanceLog->after = $user->balance - $totalPrice;
-                $userBalanceLog->amount = -1 * $totalPrice;
+                $userBalanceLog->after = $user->balance - $amount;
+                $userBalanceLog->amount = -1 * $amount;
                 $userBalanceLog->desc = '购买服务：' . $goods->name;
                 $userBalanceLog->created_at = date('Y-m-d H:i:s');
                 $userBalanceLog->save();
@@ -917,19 +908,23 @@ class UserController extends Controller
                         Order::query()->where('oid', $vo->oid)->update(['is_expire' => 1]);
                         User::query()->where('id', $user->id)->decrement('transfer_enable', $vo->goods->traffic * 1048576);
                     }
+
+                    // 重置已用流量
+                    User::query()->where('id', $user->id)->update(['u' => 0, 'd' => 0]);
                 }
 
                 // 把商品的流量加到账号上
                 User::query()->where('id', $user->id)->increment('transfer_enable', $goods->traffic * 1048576);
 
-                // 套餐就改流量重置日，加油包不改
+                // 更新账号过期时间、流量重置日
                 if ($goods->type == 2) {
-                    // 将商品的有效期和流量自动重置日期加到账号上
                     $traffic_reset_day = in_array(date('d'), [29, 30, 31]) ? 28 : abs(date('d'));
-                    User::query()->where('id', $user->id)->update(['traffic_reset_day' => $traffic_reset_day, 'expire_time' => date('Y-m-d', strtotime("+" . $goods->days . " days", strtotime($user->expire_time))), 'enable' => 1]);
+                    User::query()->where('id', $user->id)->update(['traffic_reset_day' => $traffic_reset_day, 'expire_time' => date('Y-m-d', strtotime("+" . $goods->days . " days")), 'enable' => 1]);
                 } else {
-                    // 将商品的有效期和流量自动重置日期加到账号上
-                    User::query()->where('id', $user->id)->update(['expire_time' => date('Y-m-d', strtotime("+" . $goods->days . " days")), 'enable' => 1]);
+                    $lastCanUseDays = floor(round(strtotime($user->expire_time) - strtotime(date('Y-m-d H:i:s'))) / 3600 / 24);
+                    if ($lastCanUseDays < $goods->days) {
+                        User::query()->where('id', $user->id)->update(['expire_time' => date('Y-m-d', strtotime("+" . $goods->days . " days")), 'enable' => 1]);
+                    }
                 }
 
                 // 写入返利日志
@@ -938,8 +933,8 @@ class UserController extends Controller
                     $referralLog->user_id = $user->id;
                     $referralLog->ref_user_id = $user->referral_uid;
                     $referralLog->order_id = $order->oid;
-                    $referralLog->amount = $totalPrice;
-                    $referralLog->ref_amount = $totalPrice * self::$config['referral_percent'];
+                    $referralLog->amount = $amount;
+                    $referralLog->ref_amount = $amount * self::$config['referral_percent'];
                     $referralLog->status = 0;
                     $referralLog->save();
                 }
@@ -960,7 +955,6 @@ class UserController extends Controller
                 return Redirect::to('user/goodsList');
             }
 
-            $goods->price = $goods->price / 100;
             $goods->traffic = flowAutoShow($goods->traffic * 1048576);
             $view['goods'] = $goods;
             $view['is_youzan'] = self::$config['is_youzan'];
@@ -1028,15 +1022,7 @@ class UserController extends Controller
         $view['totalAmount'] = ReferralLog::query()->where('ref_user_id', $user['id'])->sum('ref_amount') / 100;
         $view['canAmount'] = ReferralLog::query()->where('ref_user_id', $user['id'])->where('status', 0)->sum('ref_amount') / 100;
         $view['link'] = self::$config['website_url'] . '/register?aff=' . $user['id'];
-
-        $referralLogList = ReferralLog::query()->where('ref_user_id', $user['id'])->with('user')->paginate(10);
-        if (!$referralLogList->isEmpty()) {
-            foreach ($referralLogList as &$referral) {
-                $referral->amount = $referral->amount / 100;
-                $referral->ref_amount = $referral->ref_amount / 100;
-            }
-        }
-        $view['referralLogList'] = $referralLogList;
+        $view['referralLogList'] = ReferralLog::query()->where('ref_user_id', $user['id'])->with('user')->paginate(10);
 
         return Response::view('user/referral', $view);
     }
@@ -1099,6 +1085,7 @@ class UserController extends Controller
 
         $view['website_analytics'] = self::$config['website_analytics'];
         $view['website_customer_service'] = self::$config['website_customer_service'];
+        $view['subscribe_status'] = $subscribe->status;
         $view['link'] = self::$config['subscribe_domain'] ? self::$config['subscribe_domain'] . '/s/' . $code : self::$config['website_url'] . '/s/' . $code;
 
         return Response::view('/user/subscribe', $view);
@@ -1208,6 +1195,7 @@ class UserController extends Controller
     public function switchLang(Request $request, $locale)
     {
         $request->session()->put("locale", $locale);
+
         return Redirect::back();
     }
 

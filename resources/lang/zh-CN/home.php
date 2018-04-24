@@ -6,6 +6,9 @@ return [
     'copy_subscribe_address' => '复制地址',
     'exchange_subscribe' => '更换地址',
     'subscribe_warning' => '警告：该订阅地址仅限个人使用，请勿传播该地址，否则会导致您的账号流量异常。',
+    'reset_password_title' => '重置密码',
+    'system_down' => '系统维护中',
+    'subscribe_baned' => '您的订阅功能已被封禁，请联系管理员',
 
     // 菜单
     'home' => '首页',
