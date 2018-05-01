@@ -40,7 +40,7 @@ return [
     'recharge' => 'Recharge',
     'enabled' => 'normal',
     'disabled' => 'disabled',
-    'nerver_used' => 'never used',
+    'never_used' => 'never used',
     'expired' => 'expired',
     'never_loggedin' => 'never logged in',
     'announcement' => 'Announcement',
