@@ -212,12 +212,27 @@ class RegisterController extends Controller
 
                 $request->session()->flash('regSuccessMsg', '注册成功：激活邮件已发送，请查看邮箱');
             } else {
+                // 如果不需要激活，则直接给推荐人加流量
+                if ($referral_uid) {
+                    $transfer_enable = self::$config['referral_traffic'] * 1048576;
+
+                    User::query()->where('id', $referral_uid)->increment('transfer_enable', $transfer_enable);
+                    User::query()->where('id', $referral_uid)->update(['enable' => 1]);
+                }
+
                 $request->session()->flash('regSuccessMsg', '注册成功');
             }
 
             return Redirect::to('login');
         } else {
             $request->session()->put('register_token', makeRandStr(16));
+
+            // 如果第一次打开带返aff，则存储aff，防止再次打开无返利aff
+            if (intval($request->get('aff'))) {
+                if (!$request->session()->get('register_aff')) {
+                    $request->session()->put('register_aff', intval($request->get('aff')));
+                }
+            }
 
             $view['is_captcha'] = self::$config['is_captcha'];
             $view['is_register'] = self::$config['is_register'];
